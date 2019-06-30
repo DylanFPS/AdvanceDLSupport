@@ -1,5 +1,5 @@
-﻿//
-//  IPlatformLoader.cs
+//
+//  DelegateLifetime.cs
 //
 //  Copyright (c) 2018 Firwood Software
 //
@@ -17,15 +17,27 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using JetBrains.Annotations;
-
-namespace AdvancedDLSupport.Loaders
+namespace AdvancedDLSupport
 {
     /// <summary>
-    /// Represents a class which can load libraries and symbols on a specific platform.
+    /// Depicts the delegate lifetime.
     /// </summary>
-    [PublicAPI]
-    public interface IPlatformLoader : ISymbolLoader, ILibraryLoader
+    public enum DelegateLifetime
     {
+        /// <summary>
+        /// Delegate lifetime needs to be managed by user.
+        /// </summary>
+        UserManaged,
+
+        /// <summary>
+        /// Delegate is kept alive till unloading of the instance that the call is made on is disposed.
+        /// This is the default lifetime management.
+        /// </summary>
+        Persistent,
+
+        /// <summary>
+        /// Delegate is alive only for this call.
+        /// </summary>
+        CallOnly,
     }
 }
