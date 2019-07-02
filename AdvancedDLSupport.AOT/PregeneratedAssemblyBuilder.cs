@@ -25,8 +25,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using AdvancedDLSupport.Extensions;
 using JetBrains.Annotations;
+using Microsoft.Build.Framework;
 using Mono.DllMap.Extensions;
-using NLog;
 using StrictEmit;
 
 using static AdvancedDLSupport.ImplementationOptions;
@@ -41,7 +41,7 @@ namespace AdvancedDLSupport.AOT
     public class PregeneratedAssemblyBuilder
     {
         [NotNull]
-        private static ILogger _log = LogManager.GetCurrentClassLogger();
+        internal static ILogger _log;
 
         [NotNull]
         private static object _fileCopyLock = new object();
@@ -176,11 +176,11 @@ namespace AdvancedDLSupport.AOT
             var automaticInterfaces = new List<Type>();
             foreach (var sourceAssembly in SourceAssemblies)
             {
-                _log.Info($"Scanning {sourceAssembly.GetName().Name}...");
                 foreach (var automaticInterface in sourceAssembly.ExportedTypes.Where(t => t.HasCustomAttribute<AOTTypeAttribute>()))
                 {
                     automaticInterfaces.Add(automaticInterface);
-                    _log.Info($"Discovered {automaticInterface.Name}.");
+
+                    // TODO logging
                 }
             }
 
