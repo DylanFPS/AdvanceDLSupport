@@ -1,5 +1,5 @@
 ﻿//
-//  Program.cs
+//  GenerateDLDynamicAssembliesTask.cs
 //
 //  Copyright (c) 2018 Firwood Software
 //

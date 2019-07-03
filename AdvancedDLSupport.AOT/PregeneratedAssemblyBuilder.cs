@@ -40,12 +40,6 @@ namespace AdvancedDLSupport.AOT
     [PublicAPI]
     public class PregeneratedAssemblyBuilder
     {
-        [NotNull]
-        internal static ILogger _log;
-
-        [NotNull]
-        private static object _fileCopyLock = new object();
-
         [NotNull, ItemNotNull]
         private List<Assembly> SourceAssemblies { get; }
 
