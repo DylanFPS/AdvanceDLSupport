@@ -25,7 +25,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using AdvancedDLSupport.Extensions;
 using JetBrains.Annotations;
-using Microsoft.Build.Framework;
 using Mono.DllMap.Extensions;
 using StrictEmit;
 
