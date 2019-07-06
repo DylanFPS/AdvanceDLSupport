@@ -36,22 +36,29 @@ namespace AdvancedDLSupport.AOT.Tasks
         /// Gets or sets the input file to pass to the task.
         /// </summary>
         [Required]
+        [NotNull]
         public string InputFile { get; set; }
 
         /// <summary>
         /// Gets or sets the output directory in which pre-generated assemblies are outputted.
         /// </summary>
         [Required]
+        [NotNull]
         public string OutputDirectory { get; set; }
 
         /// <summary>
         /// Gets or sets the <see cref="AdvancedDLSupport.ImplementationOptions"/> to use.
         /// </summary>
-        public string Options { get; set; }
+        [NotNull]
+        public string Options { get; set; } = "GenerateDisposalChecks;" +
+                                              "EnableDllMapSupport;" +
+                                              "EnableOptimizations;" +
+                                              "SuppressSecurity";
 
         /// <summary>
         /// Gets the <see cref="AdvancedDLSupport.ImplementationOptions"/> from the <see cref="Options"/> property.
         /// </summary>
+        [NotNull]
         public ImplementationOptions ImplementationOptions
         {
             get
