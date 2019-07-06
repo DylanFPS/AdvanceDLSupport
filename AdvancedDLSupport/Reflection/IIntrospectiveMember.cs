@@ -45,19 +45,19 @@ namespace AdvancedDLSupport.Reflection
 
         /// <summary>
         /// Gets the full native entrypoint of the member. This is the configured native entrypoint, with any
-        /// transformations applied.
+        /// transformations from <see cref="NativeSymbolsAttribute"/> and manglers applied.
         /// </summary>
         /// <returns>The native entrypoint.</returns>
         [PublicAPI, Pure, NotNull]
         string GetFullNativeEntrypoint();
 
         /// <summary>
-        /// Gets the full unmangled native entrypoint of the member. This is the configured native entrypoint, with any
-        /// transformations except name mangling applied.
+        /// Gets the transformed native entrypoint of the member. This is the confirgured native entrypoint, with any
+        /// transformations from <see cref="NativeSymbolsAttribute"/> applied.
         /// </summary>
         /// <returns>The native entrypoint.</returns>
         [PublicAPI, Pure, NotNull]
-        string GetFullUnmangledNativeEntrypoint();
+        string GetTransformedNativeEntrypoint();
 
         /// <summary>
         /// Gets the native entrypoint of the member. This is just the configured native entrypoint, without any
