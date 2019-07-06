@@ -26,6 +26,7 @@ using System.Reflection.Emit;
 using AdvancedDLSupport.Extensions;
 using JetBrains.Annotations;
 using Mono.DllMap.Extensions;
+using NLog;
 using StrictEmit;
 
 using static AdvancedDLSupport.ImplementationOptions;
@@ -39,6 +40,9 @@ namespace AdvancedDLSupport.AOT
     [PublicAPI]
     public class PregeneratedAssemblyBuilder
     {
+        [NotNull]
+        private static ILogger _log = LogManager.GetCurrentClassLogger();
+
         [NotNull, ItemNotNull]
         private List<Assembly> SourceAssemblies { get; }
 
@@ -169,11 +173,11 @@ namespace AdvancedDLSupport.AOT
             var automaticInterfaces = new List<Type>();
             foreach (var sourceAssembly in SourceAssemblies)
             {
+                _log.Info($"Scanning {sourceAssembly.GetName().Name}...");
                 foreach (var automaticInterface in sourceAssembly.ExportedTypes.Where(t => t.HasCustomAttribute<AOTTypeAttribute>()))
                 {
                     automaticInterfaces.Add(automaticInterface);
-
-                    // TODO logging
+                    _log.Info($"Discovered {automaticInterface.Name}.");
                 }
             }
 
