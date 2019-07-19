@@ -19,6 +19,7 @@
 
 using System;
 using System.Data;
+using System.Linq;
 using System.Runtime.InteropServices;
 using AdvancedDLSupport.Tests.Data;
 using AdvancedDLSupport.Tests.TestBases;
@@ -49,6 +50,13 @@ namespace AdvancedDLSupport.Tests.Integration
             {
                 Assert.True(span[i] == i);
             }
+        }
+
+        [Fact]
+        public void CanMarshalCollectionAsParameter()
+        {
+            var result = Library.IsInt32ArrayZeroToNine(Enumerable.Range(0, 10).ToArray());
+            Assert.True(result == 1);
         }
 
         [Fact]

@@ -1,4 +1,4 @@
-﻿//
+//
 //  ISpanMarshallingTests.cs
 //
 //  Copyright (c) 2018 Firwood Software
@@ -29,5 +29,7 @@ namespace AdvancedDLSupport.Tests.Data
     {
         [return: NativeCollectionLength(10)]
         Span<int> GetInt32ArrayZeroToNine();
+
+        int IsInt32ArrayZeroToNine(Span<int> arr);
     }
 }

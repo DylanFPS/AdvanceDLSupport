@@ -26,6 +26,7 @@ using AdvancedDLSupport.Extensions;
 using AdvancedDLSupport.Pipeline;
 using AdvancedDLSupport.Reflection;
 using JetBrains.Annotations;
+using StrictEmit;
 
 namespace AdvancedDLSupport.ImplementationGenerators
 {
@@ -62,22 +63,42 @@ namespace AdvancedDLSupport.ImplementationGenerators
         /// <inheritdoc />
         public override IntrospectiveMethodInfo GeneratePassthroughDefinition(PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
         {
-            if (!workUnit.Definition.ReturnType.GenericTypeArguments[0].IsValueType)
+            var definition = workUnit.Definition;
+            if (IsSpan(workUnit.Definition.ReturnType) &&
+                !definition.ReturnType.GenericTypeArguments[0].IsValueType)
             {
                 // Span<byte> is used because unbound generics are not allowed inside a nameof, and it still results as just 'Span'
                 throw new NotSupportedException($"Method is not a {nameof(ValueType)} and cannot be marshaled as a {nameof(Span<byte>)}. Marshalling {nameof(Span<byte>)}" +
                                                 $"requires the marshaled type T in {nameof(Span<byte>)}<T> to be a {nameof(ValueType)}");
             }
 
-            var definition = workUnit.Definition;
+            var newReturnType = IsSpan(definition.ReturnType)
+                ? definition.ReturnType.GenericTypeArguments[0].MakePointerType()
+                : definition.ReturnType;
+            var parametersTypes = new Type[definition.ParameterTypes.Count];
 
-            Type newReturnType = definition.ReturnType.GenericTypeArguments[0].MakePointerType();
+            for (var i = 0; i < parametersTypes.Length; i++)
+            {
+                var param = definition.ParameterTypes[i];
+                if (IsSpan(param))
+                {
+                    if (!param.GenericTypeArguments[0].IsValueType)
+                    {
+                        throw new NotSupportedException($"{param.Name} is not a {nameof(ValueType)} and cannot be " +
+                                                        $"marshaled as a {nameof(Span<byte>)}. Marshalling " +
+                                                        $"{nameof(Span<byte>)} requires the marshaled type T in" +
+                                                        $"{nameof(Span<byte>)}<T> to be a {nameof(ValueType)}");
+                    }
 
-            /* TODO? Add marshaling for Span<> params */
+                    parametersTypes[i] = param.GenericTypeArguments[0].MakePointerType();
+                }
+                else
+                {
+                    parametersTypes[i] = param;
+                }
+            }
 
-            Type[] parametersTypes = definition.ParameterTypes.ToArray();
-
-            MethodBuilder passthroughMethod = TargetType.DefineMethod
+            var passthroughMethod = TargetType.DefineMethod
             (
                 $"{workUnit.GetUniqueBaseMemberName()}_wrapped",
                 MethodAttributes.Private | MethodAttributes.Virtual | MethodAttributes.HideBySig,
@@ -99,12 +120,47 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
+        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        {
+            il.EmitLoadArgument(0);
+
+            for (short i = 0; i < workUnit.Definition.ParameterTypes.Count; i++)
+            {
+                if (workUnit.Definition.ParameterTypes[i].IsGenericType)
+                {
+                    var typeDef = workUnit.Definition.ParameterTypes[i];
+                    var genTypeDef = typeDef.GetGenericTypeDefinition();
+                    if (genTypeDef == typeof(Span<>))
+                    {
+                        var method = typeDef.GetMethod("GetPinnableReference");
+                        if (method is null)
+                        {
+                            throw new NotSupportedException(typeDef.Name + " does not contain a GetPinnableReference" +
+                                                            " method.");
+                        }
+
+                        il.EmitLoadArgument((short)(i + 1));
+                        il.EmitCallDirect(method);
+                        il.EmitConvertToNativeInt();
+                    }
+                }
+                else
+                {
+                    il.EmitLoadArgument((short)(i + 1));
+                }
+            }
+        }
+
+        /// <inheritdoc />
         public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
         {
-            ConstructorInfo ctor = workUnit.Definition.ReturnType.GetConstructor(new[] { typeof(void*), typeof(int) });
+            if (IsSpan(workUnit.Definition.ReturnType))
+            {
+                var ctor = workUnit.Definition.ReturnType.GetConstructor(new[] { typeof(void*), typeof(int) });
 
-            il.Emit(OpCodes.Ldc_I4, GetNativeCollectionLengthMetadata(workUnit.Definition).Length);
-            il.Emit(OpCodes.Newobj, ctor);
+                il.EmitConstantInt(GetNativeCollectionLengthMetadata(workUnit.Definition).Length);
+                il.EmitNewObject(ctor);
+            }
         }
 
         private NativeCollectionLengthAttribute GetNativeCollectionLengthMetadata(IntrospectiveMethodInfo info)
@@ -128,8 +184,13 @@ namespace AdvancedDLSupport.ImplementationGenerators
         /// <inheritdoc />
         public override bool IsApplicable(IntrospectiveMethodInfo member)
         {
-            return member.ReturnType.IsGenericType // prevents exception on the line below
-                   && member.ReturnType.GetGenericTypeDefinition() == typeof(Span<>);
+            return IsSpan(member.ReturnType) || member.ParameterTypes.Any(IsSpan);
+        }
+
+        private bool IsSpan(Type type)
+        {
+            return type.IsGenericType // prevents exception on the line below
+                   && type.GetGenericTypeDefinition() == typeof(Span<>);
         }
     }
 }
