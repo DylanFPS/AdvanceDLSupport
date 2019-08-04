@@ -106,7 +106,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
                         throw new NotSupportedException("Reference or value type containing references found in Span<T> or ReadOnlySpan<T> generic parameter.");
                     }
 
-                    parametersTypes[i] = genericParam.MakePointerType(); // genercParam.MakePointerType();
+                    parametersTypes[i] = genericParam.MakeByRefType(); // genercParam.MakePointerType();
                 }
             }
 
@@ -156,7 +156,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
                     il.EmitCallDirect(getPinnableReferenceMethod);
                     il.EmitDuplicate();
                     il.EmitSetLocalVariable(pinnedLocal);
-                    il.EmitConvertToNativeInt();
+                    // il.EmitConvertToNativeInt();
                 }
                 else
                 {
