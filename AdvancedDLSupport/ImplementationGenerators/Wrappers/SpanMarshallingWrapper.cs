@@ -87,11 +87,32 @@ namespace AdvancedDLSupport.ImplementationGenerators
 
             /* TODO? Add marshaling for Span<> params */
 
-            Type[] parametersTypes = definition.ParameterTypes.ToArray();
+            List<Type> parametersTypes = definition.ParameterTypes.ToList();
 
-            for (int i = 0; i < parametersTypes.Length; ++i)
+            var customAttributes = definition.CustomAttributes.ToList();
+            var parameterNames = definition.ParameterNames.ToList();
+            var parameterAttributes = definition.ParameterAttributes.ToList();
+            var parameterCustomAttributes = definition.ParameterCustomAttributes.ToList();
+            Span<int> indices = stackalloc int[definition.ParameterTypes.Count];
+            for (int i = 0; i < indices.Length; i++)
             {
-                var paramType = parametersTypes[i];
+                indices[i] = i;
+            }
+
+            void UpdateIndices(Span<int> ind, int incrementPosition)
+            {
+                for (int i = 0; i < ind.Length; i++)
+                {
+                    if (ind[i] >= incrementPosition)
+                    {
+                        ind[i]++;
+                    }
+                }
+            }
+
+            for (int i = 0; i < definition.ParameterTypes.Count; ++i)
+            {
+                var paramType = definition.ParameterTypes[i];
                 if (IsSpanType(paramType))
                 {
                     var genericParam = paramType.GenericTypeArguments[0];
@@ -106,7 +127,45 @@ namespace AdvancedDLSupport.ImplementationGenerators
                         throw new NotSupportedException("Reference or value type containing references found in Span<T> or ReadOnlySpan<T> generic parameter.");
                     }
 
-                    parametersTypes[i] = genericParam.MakeByRefType(); // genercParam.MakePointerType();
+                    var currentIndex = indices[i];
+
+                    parametersTypes[currentIndex] = genericParam.MakeByRefType(); // genercParam.MakePointerType();
+                    var spanMarshal = GetParameterSpanMarshal(definition.ParameterCustomAttributes[i]);
+
+                    if (spanMarshal != null)
+                    {
+                        int insertPosition = 0;
+                        switch (spanMarshal.LengthParameterDirection)
+                        {
+                            case LengthParameterDirection.After:
+                                insertPosition = currentIndex + 1 + spanMarshal.LengthParameterOffset;
+                                break;
+                            case LengthParameterDirection.Before:
+                                insertPosition = currentIndex - spanMarshal.LengthParameterOffset;
+                                break;
+                            default:
+                                throw new NotSupportedException("Invalid LengthParameterDirection enum value.");
+                        }
+
+                        UpdateIndices(indices, insertPosition);
+
+                        if (insertPosition < 0)
+                        {
+                            throw new InvalidOperationException("Insert position of length parameter must not be negative.");
+                        }
+
+                        if (insertPosition > parametersTypes.Count)
+                        {
+                            throw new InvalidOperationException("Insert position of length parameter must not be bigger than parameter count.");
+                        }
+
+                        parametersTypes.Insert(insertPosition, GetSpanMarshalType(spanMarshal));
+
+                        parameterNames.Insert(insertPosition, definition.ParameterNames[i] + "Length");
+                        parameterAttributes.Insert(insertPosition, ParameterAttributes.None);
+                        var customAttributeData = new InternalCustomAttributeData((short)i);
+                        parameterCustomAttributes.Insert(insertPosition, new CustomAttributeData[] { customAttributeData });
+                    }
                 }
             }
 
@@ -116,23 +175,31 @@ namespace AdvancedDLSupport.ImplementationGenerators
                 MethodAttributes.Private | MethodAttributes.Virtual | MethodAttributes.HideBySig,
                 CallingConventions.Standard,
                 newReturnType,
-                parametersTypes
+                parametersTypes.ToArray()
             );
 
-            passthroughMethod.ApplyCustomAttributesFrom(definition, newReturnType, parametersTypes);
-
-            return new IntrospectiveMethodInfo
+            var introspectiveMethod = new IntrospectiveMethodInfo
             (
                 passthroughMethod,
                 newReturnType,
                 parametersTypes,
                 definition.MetadataType,
-                definition
+                definition.Attributes,
+                definition.ReturnParameterAttributes,
+                customAttributes,
+                definition.ReturnParameterCustomAttributes,
+                parameterNames,
+                parameterAttributes,
+                parameterCustomAttributes
             );
+
+            passthroughMethod.ApplyCustomAttributesFrom(introspectiveMethod, newReturnType, parametersTypes);
+
+            return introspectiveMethod;
         }
 
         /// <inheritdoc/>
-        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             var definition = workUnit.Definition;
 
@@ -140,19 +207,30 @@ namespace AdvancedDLSupport.ImplementationGenerators
 
             il.EmitLoadArgument(0);
 
-            for (short i = 1; i <= parameterTypes.Count; ++i)
+            int originalParameterIndex = 0;
+            for (short i = 1; i <= Math.Max(parameterTypes.Count, passthroughMethod.ParameterTypes.Count); ++i, ++originalParameterIndex)
             {
-                var paramType = parameterTypes[i - 1];
+                var paramInternalLengthReference = GetInternalLengthReference(passthroughMethod.ParameterCustomAttributes[i - 1]);
 
-                if (IsSpanType(paramType))
+                if (paramInternalLengthReference != null)
                 {
+                    originalParameterIndex--;
+                    short index = paramInternalLengthReference.ArgumentIndex;
+
+                    var lengthPropertyGetter = parameterTypes[index].GetProperty(nameof(Span<byte>.Length), BindingFlags.Public | BindingFlags.Instance).GetMethod;
+                    il.EmitLoadArgumentAddress((short)(index + 1));
+                    il.EmitCallDirect(lengthPropertyGetter);
+                }
+                else if (IsSpanType(parameterTypes[originalParameterIndex]))
+                {
+                    var paramType = parameterTypes[originalParameterIndex];
                     Debug.Assert(paramType.GenericTypeArguments.Length == 1, "Span Type does not the correct number of generic parameters (1), CLR/BCL bug?");
 
                     var pinnedLocal = il.DeclareLocal(paramType.GenericTypeArguments[0].MakeByRefType(), true);
 
                     var getPinnableReferenceMethod = paramType.GetMethod(nameof(Span<byte>.GetPinnableReference), BindingFlags.Public | BindingFlags.Instance);
 
-                    il.EmitLoadArgumentAddress(i);
+                    il.EmitLoadArgumentAddress((short)(originalParameterIndex + 1));
                     il.EmitCallDirect(getPinnableReferenceMethod);
                     il.EmitDuplicate();
                     il.EmitSetLocalVariable(pinnedLocal);
@@ -166,7 +244,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             Type returnType = workUnit.Definition.ReturnType;
 
@@ -212,6 +290,65 @@ namespace AdvancedDLSupport.ImplementationGenerators
             return false;
         }
 
+        /// <summary>
+        /// Gets the parameter's span marshal.
+        /// </summary>
+        /// <param name="customAttributes">The custom attributes applied to the parameter.</param>
+        /// <returns>The <see cref="SpanMarshallingAttribute"/>.</returns>
+        [Pure]
+        private static SpanMarshallingAttribute GetParameterSpanMarshal([NotNull, ItemNotNull] IEnumerable<CustomAttributeData> customAttributes)
+        {
+            var paramSpanMarshal = customAttributes.FirstOrDefault
+            (
+                a =>
+                    a.AttributeType == typeof(SpanMarshallingAttribute)
+            );
+
+            return paramSpanMarshal?.ToInstance<SpanMarshallingAttribute>();
+        }
+
+        /// <summary>
+        /// Gets the parameter's internal length reference.
+        /// </summary>
+        /// <param name="customAttributes">The custom attributes applied to the parameter.</param>
+        /// <returns>The <see cref="SpanMarshallingAttribute"/>.</returns>
+        [Pure]
+        private static InternalLengthReferenceAttribute GetInternalLengthReference([NotNull, ItemNotNull] IEnumerable<CustomAttributeData> customAttributes)
+        {
+            var paramSpanMarshal = customAttributes.FirstOrDefault
+            (
+                a =>
+                    a.AttributeType == typeof(InternalLengthReferenceAttribute)
+            );
+
+            return paramSpanMarshal?.ToInstance<InternalLengthReferenceAttribute>();
+        }
+
+        private static Type GetSpanMarshalType(SpanMarshallingAttribute attribute)
+        {
+            switch (attribute.LengthParameterType)
+            {
+                case LengthParameterType.SByte:
+                    return typeof(sbyte);
+                case LengthParameterType.Byte:
+                    return typeof(byte);
+                case LengthParameterType.Short:
+                    return typeof(short);
+                case LengthParameterType.UShort:
+                    return typeof(ushort);
+                case LengthParameterType.Int:
+                    return typeof(int);
+                case LengthParameterType.UInt:
+                    return typeof(uint);
+                case LengthParameterType.Long:
+                    return typeof(long);
+                case LengthParameterType.ULong:
+                    return typeof(ulong);
+            }
+
+            throw new NotSupportedException("Invalid span marshalling attribute: Invalid length type.");
+        }
+
         private static bool IsOrContainsReferences(Type type)
         {
             if (type.IsPrimitive)
@@ -233,6 +370,39 @@ namespace AdvancedDLSupport.ImplementationGenerators
             }
 
             return false;
+        }
+
+        private class InternalLengthReferenceAttribute : Attribute
+        {
+            public InternalLengthReferenceAttribute(short argumentIndex)
+            {
+                ArgumentIndex = argumentIndex;
+            }
+
+            /// <summary>
+            /// Gets the index of the argument from which the length gets extracted.
+            /// </summary>
+            public short ArgumentIndex { get; }
+        }
+
+        private class InternalCustomAttributeData : CustomAttributeData
+        {
+            public InternalCustomAttributeData(short argumentIndex)
+            {
+                var ctor = typeof(InternalLengthReferenceAttribute).GetConstructor(new[] { typeof(short) });
+                if (ctor == null)
+                {
+                    throw new InvalidProgramException("InternalLengthReferenceAttribute ctor not found.");
+                }
+
+                Constructor = ctor;
+
+                ConstructorArguments = new List<CustomAttributeTypedArgument>(new[] { new CustomAttributeTypedArgument(argumentIndex), });
+            }
+
+            public override ConstructorInfo Constructor { get; }
+
+            public override IList<CustomAttributeTypedArgument> ConstructorArguments { get; }
         }
     }
 }

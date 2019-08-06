@@ -280,6 +280,55 @@ namespace AdvancedDLSupport.Reflection
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="IntrospectiveMethodInfo"/> class.
+        /// </summary>
+        /// <param name="builder">The method builder to wrap.</param>
+        /// <param name="returnType">The return type of the method.</param>
+        /// <param name="parameterTypes">The parameter types of the method.</param>
+        /// <param name="metadataType">The type that the member gets native metadata from.</param>
+        /// <param name="attributes">The attributes of the method.</param>
+        /// <param name="returnParameterAttributes">The attributes for the return parameter of the method.</param>
+        /// <param name="customAttributes">The custom attributes of the method.</param>
+        /// <param name="returnParameterCustomAttributes">The custom attributes for the method's return parameter.</param>
+        /// <param name="parameterNames">The names of the method's parameters.</param>
+        /// <param name="parameterAttributes">The attributes for the method's parameters.</param>
+        /// <param name="parameterCustomAttributes">The custom attributes for the method's parameters.</param>
+        [PublicAPI]
+        internal IntrospectiveMethodInfo
+        (
+            [NotNull] MethodBuilder builder,
+            [NotNull] Type returnType,
+            [NotNull, ItemNotNull] IEnumerable<Type> parameterTypes,
+            [NotNull] Type metadataType,
+            MethodAttributes attributes,
+            ParameterAttributes returnParameterAttributes,
+            [CanBeNull] IEnumerable<CustomAttributeData> customAttributes = null,
+            [CanBeNull] IEnumerable<CustomAttributeData> returnParameterCustomAttributes = null,
+            [CanBeNull] IEnumerable<string> parameterNames = null,
+            [CanBeNull] IEnumerable<ParameterAttributes> parameterAttributes = null,
+            [CanBeNull] IEnumerable<IEnumerable<CustomAttributeData>> parameterCustomAttributes = null
+        )
+            : base(builder, metadataType, customAttributes?.ToList() ?? new List<CustomAttributeData>())
+        {
+            ReturnType = returnType;
+            ParameterTypes = parameterTypes.ToList();
+
+            // TODO: Pass in or determine if they are available
+            IsSpecialName = builder.IsSpecialName;
+            IsAbstract = builder.IsAbstract;
+
+            // Copy attributes
+            Attributes = attributes;
+
+            ParameterNames = parameterNames?.ToList() ?? new List<string>();
+            ParameterAttributes = parameterAttributes?.ToList() ?? new List<ParameterAttributes>();
+            ParameterCustomAttributes = parameterCustomAttributes?.Select(x => x.ToList()).ToList() ?? new List<List<CustomAttributeData>>();
+
+            ReturnParameterAttributes = returnParameterAttributes;
+            ReturnParameterCustomAttributes = returnParameterCustomAttributes?.ToList() ?? new List<CustomAttributeData>();
+        }
+
+        /// <summary>
         /// Determines whether or not the current instance has the same signature as another.
         /// </summary>
         /// <param name="other">The other method info.</param>

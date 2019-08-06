@@ -37,8 +37,9 @@ namespace AdvancedDLSupport.ImplementationGenerators
         /// </summary>
         /// <param name="il">The generator where the instructions will be emitted.</param>
         /// <param name="workUnit">The method being worked on.</param>
+        /// <param name="passthroughMethod">The generated passed through method.</param>
         [PublicAPI]
-        void EmitPrologue([NotNull] ILGenerator il, [NotNull] PipelineWorkUnit<IntrospectiveMethodInfo> workUnit);
+        void EmitPrologue([NotNull] ILGenerator il, [NotNull] PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod);
 
         /// <summary>
         /// Emits the wrapper prologue, that is, the instructions after the method call. The return value (if any) of
@@ -47,7 +48,8 @@ namespace AdvancedDLSupport.ImplementationGenerators
         /// </summary>
         /// <param name="il">The generator where the instructions will be emitted.</param>
         /// <param name="workUnit">The method being worked on.</param>
+        /// <param name="passthroughMethod">The generated passed through method.</param>
         [PublicAPI]
-        void EmitEpilogue([NotNull] ILGenerator il, [NotNull] PipelineWorkUnit<IntrospectiveMethodInfo> workUnit);
+        void EmitEpilogue([NotNull] ILGenerator il, [NotNull] PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod);
     }
 }

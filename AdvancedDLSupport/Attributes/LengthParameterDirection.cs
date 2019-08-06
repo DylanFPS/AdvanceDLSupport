@@ -1,5 +1,5 @@
-﻿//
-//  ISpanMarshallingTests.cs
+//
+//  LengthParameterDirection.cs
 //
 //  Copyright (c) 2018 Firwood Software
 //
@@ -17,25 +17,21 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using System;
-
-#pragma warning disable SA1600, CS1591
-
-namespace AdvancedDLSupport.Tests.Data
+namespace AdvancedDLSupport
 {
-    public interface ISpanMarshallingTests
+    /// <summary>
+    /// Depicts the relative direction of the length parameter.
+    /// </summary>
+    public enum LengthParameterDirection
     {
-        [return: NativeCollectionLength(10)]
-        Span<int> GetInt32ArrayZeroToNine();
+        /// <summary>
+        /// Length parameter is before the marshaled collection parameter.
+        /// </summary>
+        Before,
 
-        void WriteToInt32Array(Span<int> span, int arrLen);
-
-        void WriteToInt32Array([SpanMarshalling(LengthParameterDirection = LengthParameterDirection.After)] Span<int> span);
-
-        void WriteToInt32Arrays
-        (
-            [SpanMarshalling(LengthParameterDirection = LengthParameterDirection.After)] Span<int> span1,
-            [SpanMarshalling(LengthParameterDirection = LengthParameterDirection.Before)] Span<int> span2
-        );
+        /// <summary>
+        /// Length parameter is after the marshaled collection parameter.
+        /// </summary>
+        After
     }
 }

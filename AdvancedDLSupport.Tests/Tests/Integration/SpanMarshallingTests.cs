@@ -65,6 +65,38 @@ namespace AdvancedDLSupport.Tests.Integration
         }
 
         [Fact]
+        public void CanMarshalSpanAsPointerAndParameter()
+        {
+            Span<int> span = stackalloc int[10];
+
+            Library.WriteToInt32Array(span);
+
+            for (var i = 0; i < span.Length; i++)
+            {
+                Assert.True(span[i] == i);
+            }
+        }
+
+        [Fact]
+        public void CanMarshalMultipleSpansWithLengths()
+        {
+            Span<int> span1 = stackalloc int[10];
+            Span<int> span2 = stackalloc int[20];
+
+            Library.WriteToInt32Arrays(span1, span2);
+
+            for (var i = 0; i < span1.Length; i++)
+            {
+                Assert.True(span1[i] == i);
+            }
+
+            for (var i = 0; i < span2.Length; i++)
+            {
+                Assert.True(span2[i] == span2.Length - i);
+            }
+        }
+
+        [Fact]
         public void ThrowsWhenSpanTypeIsReferenceType()
         {
             var activator = GetImplementationBuilder();

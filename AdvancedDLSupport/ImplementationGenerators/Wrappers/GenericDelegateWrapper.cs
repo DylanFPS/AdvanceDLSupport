@@ -153,7 +153,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc/>
-        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             var definition = workUnit.Definition;
 
@@ -187,7 +187,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc/>
-        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             // If the return type is a delegate, convert it back into its generic representation
             var definition = workUnit.Definition;
