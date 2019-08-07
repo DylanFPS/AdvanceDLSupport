@@ -68,7 +68,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             var throwMethod = typeof(NativeLibraryBase).GetMethod("ThrowIfDisposed", NonPublic | Instance);
 
@@ -76,7 +76,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
             il.Emit(OpCodes.Call, throwMethod);
 
             // Emit the parameters as usual
-            base.EmitPrologue(il, workUnit);
+            base.EmitPrologue(il, workUnit, passthroughMethod);
         }
     }
 }

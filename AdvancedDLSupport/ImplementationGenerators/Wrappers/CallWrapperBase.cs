@@ -87,9 +87,9 @@ namespace AdvancedDLSupport.ImplementationGenerators
 
             var il = builder.GetILGenerator();
 
-            EmitPrologue(il, workUnit);
+            EmitPrologue(il, workUnit, passthroughMethod);
             il.EmitCallDirect(passthroughMethod.GetWrappedMember());
-            EmitEpilogue(il, workUnit);
+            EmitEpilogue(il, workUnit, passthroughMethod);
             il.EmitReturn();
 
             // Pass through the method
@@ -128,7 +128,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public virtual void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public virtual void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             // Load the "this" reference
             il.EmitLoadArgument(0);
@@ -140,7 +140,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public virtual void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public virtual void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
         }
     }

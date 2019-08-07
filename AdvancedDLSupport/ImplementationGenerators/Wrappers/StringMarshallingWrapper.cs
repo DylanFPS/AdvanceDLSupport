@@ -201,7 +201,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitPrologue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             var definition = workUnit.Definition;
 
@@ -236,7 +236,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
         }
 
         /// <inheritdoc />
-        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit)
+        public override void EmitEpilogue(ILGenerator il, PipelineWorkUnit<IntrospectiveMethodInfo> workUnit, IntrospectiveMethodInfo passthroughMethod)
         {
             var definition = workUnit.Definition;
 

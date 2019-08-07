@@ -37,3 +37,19 @@ __declspec(dllexport) void WriteToInt32Array(int32_t* arr, int arrLen)
 	}
 }
 
+__declspec(dllexport) void WriteToInt32Arrays(int32_t* arr, int arrLen, int arrLen2, int32_t* arr2)
+{
+	InitGlobals();
+
+	int len = arrLen < 10 ? arrLen : 10;
+
+	for (int i = 0; i < len; ++i)
+	{
+		arr[i] = globalArray[i];
+	}
+	
+	for (int i = 0; i < arrLen2; ++ i)
+	{
+	    arr2[i] = arrLen2 - i;
+	}
+}
