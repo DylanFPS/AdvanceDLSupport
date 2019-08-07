@@ -129,7 +129,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
 
                     var currentIndex = indices[i];
 
-                    parametersTypes[currentIndex] = genericParam.MakeByRefType(); // genercParam.MakePointerType();
+                    parametersTypes[currentIndex] = genericParam.MakePointerType();
                     var spanMarshal = GetParameterSpanMarshal(definition.ParameterCustomAttributes[i]);
 
                     if (spanMarshal != null)
@@ -234,7 +234,7 @@ namespace AdvancedDLSupport.ImplementationGenerators
                     il.EmitCallDirect(getPinnableReferenceMethod);
                     il.EmitDuplicate();
                     il.EmitSetLocalVariable(pinnedLocal);
-                    // il.EmitConvertToNativeInt();
+                    il.EmitConvertToNativeInt();
                 }
                 else
                 {
@@ -394,6 +394,13 @@ namespace AdvancedDLSupport.ImplementationGenerators
                 {
                     throw new InvalidProgramException("InternalLengthReferenceAttribute ctor not found.");
                 }
+
+                var baseCtorInfo = typeof(CustomAttributeData)
+                    .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
+                    .FirstOrDefault(info => info.FieldType == typeof(ConstructorInfo));
+
+                // Workaround for mono
+                baseCtorInfo?.SetValue(this, ctor);
 
                 Constructor = ctor;
 
